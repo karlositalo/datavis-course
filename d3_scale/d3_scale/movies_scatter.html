@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Scatterplot</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+
+<body>
+<div id="chart"></div>
+<div id="comments" ><h1>Comentários sobre o gráfico</h1></div>
+<script type="text/javascript">
+    // Primeiro definimos o objeto margin
+    let margin = {top: 40, right: 40, bottom: 40, left: 60};
+    
+    // Depois definimos w e h como as dimensões internas
+    // da área do gráfico (área útil)
+    let w = 1000 - margin.left - margin.right;
+    let h = 400 - margin.top - margin.bottom;
+
+    // Depois um elemento g no svg que vai transladar a origem 
+    // do gráfico como sendo a origem da área útil do gráfico
+
+    function render(dataset){
+
+	    let xScale = d3.scaleLinear()
+	        .domain([0, d3.max(dataset, function(d) {
+	            return d.Budget_M;
+	        })])
+	        .range([0,w]);
+	        xScale.clamp(true);
+	    let yScale = d3.scaleLinear()
+	        .domain([0, d3.max(dataset, function(d) {
+	            return d.Worldwide_Gross_M;
+	        })])
+	        .range([h,0]);
+	       	yScale.clamp(true);
+	    let xAxis = d3.axisBottom()
+	        .scale(xScale);
+	    let yAxis = d3.axisLeft()
+	        .scale(yScale);
+
+
+	    let svg = d3.select("#chart")
+	            .append("svg")
+	                .style("background-color","rgb(200,200,200)")
+	                .attr("width", w + margin.left + margin.right)
+	                .attr("height", h + margin.top + margin.bottom)
+	            .append("g")
+	                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	    let svg2 = d3.select("#comments")
+	            .append("svg")
+	            	.attr("title","teste")
+	                .style("background-color","rgb(200,200,200)")
+	                .attr("width", w + margin.left + margin.right)
+	                .attr("height", h/4 + margin.top + margin.bottom)
+	            .append("g")
+	                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	    
+	    svg2.append("text")
+	    	.attr("x", 0)
+	    	.attr("y", 0)
+	    	.text("- Correlação baixa, coeficiente linear da reta de regressão é quase zero.(Desconsiderando outliers que sujam os dados)");
+	    svg2.append("text")
+	    	.attr("x", 0)
+	    	.attr("y", 50)
+	    	.text("- Considerei outiliers os filmes marcados em vermelho, onde se há uma discrepância entre o valor arrecadado nas bilheterias e o orçamento.");
+	    svg2.append("text")
+	    	.attr("x", 0)
+	    	.attr("y", 100)
+	    	.text("- Estão marcados em verde os filmes que não são outiliers explícitos, mas também geram lucro maior ou igual	a dez vezes o seu orçamento.");
+	    // Agora todo o código pode ignorar as margens. 
+	    // Copie aqui o código de criação das escalas do arquivo
+	    // anterior (vai continuar o mesmo)
+	    svg.selectAll("circle")
+	    .data(dataset)
+	    .enter()
+	    .append("circle")
+	    .attr("cx", function(d){ return xScale(d.Budget_M);})
+	    .attr("cy",function(d){ return yScale(d.Worldwide_Gross_M);})
+	    .attr("r",5)
+	    .style("stroke","black")
+	    .style("fill",function(d){
+	    	if(d.Worldwide_Gross_M-d.Budget_M > 1200){
+	    		return "red";
+	    	}else if(d.Worldwide_Gross_M/d.Budget_M > 10){
+	    		return "green";
+	    	}else{
+	    		return "black";
+	    	}
+	    });
+	    // Depois adicione os labels
+	    svg.selectAll("text")
+	    .data(dataset)
+	    .enter()
+	    .append("text")
+	    .attr("x", function(d){
+	    	if(d.Film == "The Twilight Saga: New Moon")
+	    		return xScale(d.Budget_M-25);
+	    	else
+	    		return xScale(d.Budget_M-5);
+	    })
+	    .attr("y", function(d){
+			if(d.Film == "The Twilight Saga: New Moon")
+	    		return yScale(d.Worldwide_Gross_M+120);
+	    	else	    	
+	    		return yScale(d.Worldwide_Gross_M-120);
+	    })
+	    .attr("font-family", "sans-serif")
+	    .attr("font-size", "11px")
+	    .attr("fill", "black")
+	    .text(function(d) {
+	        if(d.Worldwide_Gross_M/d.Budget_M > 10){
+	    		return d.Film;
+	    	}
+	    });	
+
+	    svg.append("g")
+	        .attr("transform","translate(0,"+ h + ")")
+	        .call(xAxis);
+
+	    svg.append("g")
+	        .call(yAxis);
+	    // Título eixo horizontal
+	    svg.append("text")
+	        .attr("transform", "translate(" + (w/2) + "," + (h + margin.bottom) + ")")
+	        .style("text-anchor", "middle")
+	        .attr("font-family", "sans-serif")
+	        .attr("font-size", "12px")
+	        .text("Orçamento - (Milhões de dólares)");
+	    // Depois adicione os elementos círculos
+	    // Título eixo vertical
+	    svg.append("text")
+	        .attr("transform", "rotate(-90)")
+	        .attr("y", 0 - margin.left)
+	        .attr("x",0 - (h / 2))
+	        .attr("dy", "1em")
+	        .style("text-anchor", "middle")
+	        .attr("font-family", "sans-serif")
+	        .attr("font-size", "12px")
+	        .text("Bilheteria - (Milhões de dólares)");
+    }
+
+
+    d3.json("data/movies.json").then(function(json){ 
+        render(json);
+    });
+        
+</script>
+</body>
+</html>

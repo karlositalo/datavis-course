@@ -11,11 +11,13 @@
 
 </head>
 <body>
-     <div><h1> Bilheteria por ano</h1>
-        <div id="chart"></div>
-    </div>
+     
+    <div id="chart"><h1> Bilheteria por ano </h1></div>
+   
+    <div id="chart1"> <h1> Bilheteria por gênero </h1></div>
     <script type="text/javascript">
         let barChart = dc.barChart('#chart');
+        let barChart1 = dc.barChart('#chart1');
 
         d3.json("data/movies.json").then(function(data){
             // formatando nossos dados
@@ -33,7 +35,15 @@
                 return d.Year;
             });
 
+            let genreDim = facts.dimension(function(d){
+                return d.Genre;
+            });
+
             let filmGroup = yearDim.group().reduceSum(function(d){
+                return d.Worldwide_Gross_M;
+            });
+
+            let filmGroup1 = genreDim.group().reduceSum(function(d){
                 return d.Worldwide_Gross_M;
             });
             
@@ -56,6 +66,23 @@
                      .brushOn(false)
                      .xAxis().tickFormat(d3.format("d"));
             barChart.xAxis().ticks(5);
+            //dc.renderAll();
+
+            barChart1
+                     .width(800)
+                     .height(400)
+                     .margins({top: 50, right: 50, bottom: 25, left: 40})
+                     .dimension(genreDim)
+                     .group(filmGroup1)
+                     .gap(20)
+                     //.centerBar(true)
+                     .x(d3.scaleBand())
+                     .xUnits(dc.units.ordinal)
+                     .renderHorizontalGridLines(true)
+                     //.legend(dc.legend().x(700).y(5).itemHeight(13).gap(5))
+                     .brushOn(false);
+                     //.xAxis().tickFormat(d3.format("d"));
+            //barChart.xAxis().ticks(5);
             dc.renderAll();
 
         });

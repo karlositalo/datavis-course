@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
+	integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="crossorigin=""/>
+	<!-- Make sure you put this AFTER Leaflet's CSS -->
+	<script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
+	integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="crossorigin=""></script>
+
+
+    <title> Chicago's Crimes Data</title>
+
+    <!-- Custom styles for this template -->
+	<link rel="stylesheet" href="css/dc.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/crossfilter.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="js/dc.min.js"></script>
+</head>
+<body>
+  <main role="main" class="container">
+    <div class='row'>
+    	<div id="mapid" class = "col-6"></div>
+    	<div class = "col-6">
+    		<div id = 'crimes-chart'>
+    			<h4>Number of Crimes</h4>
+    		</div>
+    	</div>
+    </div>
+    <div class='row'>
+      <div id='time-chart' class="single-col">
+         <h4> Crimes per day</h4>
+      </div>
+    </div>
+  </main>
+  <script type="text/javascript">
+	// Create the dc.js chart objects & link to div
+	
+	var barChart = dc.barChart('#crimes-chart')
+	var seriesChart = dc.seriesChart('#time-chart')
+	
+	let map = L.map('mapid').setView([41.881832,-87.623177], 10);
+	L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+	attribution: "Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL.",
+	maxZoom: 17
+	}).addTo(map);
+	// load data from a csv file
+	d3.csv("data/chicago_crimes_sep_2018.csv").then(function (data) {
+	  // format our data
+	  	var time_format = d3.utcParse("%m/%d/%Y %H:%M:%S %p");
+		let colorScale = d3.scaleOrdinal().domain(["HOMICIDE", "ROBBERY", "BURGLARY"])
+				.range(["#ca0020", "#0571b0", "#fdae61"]);	
+	  	data.forEach(function(d){
+	  		d.dtg = time_format(d.Date);
+	  		d.lat = d.Latitude;
+	  		d.long = d.Longitude;
+	  		d.prim = d.PrimaryType;
+ 	  	});
+ 	  
+	  // Run the data through crossfilter and load our 'facts'
+	 	var facts = crossfilter(data);
+	 // Create a dimession for DTG
+	 	let dateDim = facts.dimension(function(d){
+	 		return d.dtg;
+	 	});	
+	  	let crimeDim = facts.dimension(function(d){
+	  		return d.prim;
+	  	});
+	  
+	  	let crimeGroup = crimeDim.group();
+	 
+	  	let dayDim = facts.dimension(function(d){
+	  		return [d3.timeDay(d.dtg), d.prim];
+	  	});
+	  
+	  	let dayCrimeGroup = dayDim.group();
+		data.forEach(function(d){
+	  		let circle = L.circle([d.lat, d.long], 100, {
+							color: colorScale(d.prim),
+							weight: 2,
+							fillColor: colorScale(d.prim),
+							fillOpacity: 0.5
+							}).addTo(map);	
+			circle.bindPopup("Primary Type: <br>"+ d["PrimaryType"]);
+			
+		});
+	  	barChart.width(600)
+                .height(400)
+                .margins({top: 50, right: 50, bottom: 25, left: 40})
+                .dimension(crimeDim)
+                .x(d3.scaleOrdinal())
+                .xUnits(dc.units.ordinal)
+                .renderHorizontalGridLines(true)
+                .on('renderlet', function(chart){
+                                    chart.selectAll('rect.bar').each(function(d){
+                                        d3.select(this).attr("style", "fill: " + colorScale(d.x));
+                                    });
+                                }
+                    )
+                .ordering(function(d){return d.value})    
+                .group(crimeGroup);
+			
+		
+	 		
+	  	seriesChart.width(768)
+			    .height(480)
+			  	.yAxisLabel("Number of Crimes")
+                .xAxisLabel("Date")
+                .dimension(dayDim)
+                .group(dayCrimeGroup)
+                .x(d3.scaleTime().domain(d3.extent(data, function(d) { return d3.timeDay(d.dtg); })))
+                .seriesAccessor(function(d) { return d.key[1]; })
+                .keyAccessor(function(d) {return d.key[0];});
+	 
+	 dc.renderAll();
+	});
+	</script>
+	 <!-- Bootstrap javascript files -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+		
+</body>
+</html>

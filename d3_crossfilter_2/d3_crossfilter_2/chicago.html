@@ -28,7 +28,7 @@
     <div class='row'>
     	<div id="mapid" class = "col-6"></div>
     	<div class = "col-6">
-    		<div id = 'crimes-chart'>
+    		<div id = 'bar-chart'>
     			<h4>Number of Crimes</h4>
     		</div>
     	</div>
@@ -42,8 +42,8 @@
   <script type="text/javascript">
 	// Create the dc.js chart objects & link to div
 	
-	var barChart = dc.barChart('#crimes-chart')
-	var seriesChart = dc.seriesChart('#time-chart')
+	var barChart = dc.barChart('#bar-chart')
+	var timeChart = dc.seriesChart('#time-chart')
 	
 	let map = L.map('mapid').setView([41.881832,-87.623177], 10);
 	L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
@@ -58,9 +58,21 @@
 				.range(["#ca0020", "#0571b0", "#fdae61"]);	
 	  	data.forEach(function(d){
 	  		d.dtg = time_format(d.Date);
-	  		d.lat = d.Latitude;
-	  		d.long = d.Longitude;
-	  		d.prim = d.PrimaryType;
+	  		d.latitude = d.Latitude;
+	  		d.longitude = d.Longitude;
+	  		d.type = d["Primary Type"];
+	  		d.type_color = colorScale(d.type);
+
+	  		let circle = L.circle([d.latitude, d.longitude], 100, {
+							color: d.type_color,
+							weight: 2,
+							fillColor: d.type_color,
+							fillOpacity: 0.5
+							});
+			if(d.latitude != "" && d.longitude != ""){
+				circle.addTo(map);
+			}	
+			circle.bindPopup("Primary Type: <br>" + d.type);
  	  	});
  	  
 	  // Run the data through crossfilter and load our 'facts'
@@ -69,54 +81,50 @@
 	 	let dateDim = facts.dimension(function(d){
 	 		return d.dtg;
 	 	});	
-	  	let crimeDim = facts.dimension(function(d){
-	  		return d.prim;
+	  	let typeDim = facts.dimension(function(d){
+	  		return d.type;
 	  	});
 	  
-	  	let crimeGroup = crimeDim.group();
+	  	let typeGroup = typeDim.group().reduceCount();
 	 
 	  	let dayDim = facts.dimension(function(d){
-	  		return [d3.timeDay(d.dtg), d.prim];
+	  		return [d3.timeDay(d.dtg), d.type];
 	  	});
 	  
-	  	let dayCrimeGroup = dayDim.group();
-		data.forEach(function(d){
-	  		let circle = L.circle([d.lat, d.long], 100, {
-							color: colorScale(d.prim),
-							weight: 2,
-							fillColor: colorScale(d.prim),
-							fillOpacity: 0.5
-							}).addTo(map);	
-			circle.bindPopup("Primary Type: <br>"+ d["PrimaryType"]);
-			
-		});
+	  	let dayGroup = dayDim.group();
+
+	  	var typeScale = d3.scaleOrdinal().domain(["HOMICIDE", "ROBBERY", "BURGLARY"]);
+	  	
 	  	barChart.width(600)
                 .height(400)
                 .margins({top: 50, right: 50, bottom: 25, left: 40})
-                .dimension(crimeDim)
-                .x(d3.scaleOrdinal())
+                .dimension(typeDim)
+                .x(typeScale)
                 .xUnits(dc.units.ordinal)
+                .group(typeGroup)
+                .colors(colorScale)
                 .renderHorizontalGridLines(true)
-                .on('renderlet', function(chart){
-                                    chart.selectAll('rect.bar').each(function(d){
-                                        d3.select(this).attr("style", "fill: " + colorScale(d.x));
-                                    });
-                                }
-                    )
-                .ordering(function(d){return d.value})    
-                .group(crimeGroup);
+                .colorAccessor(function(d) {return d.key;})
+                .ordering(function(d){return d.value});
 			
 		
-	 		
-	  	seriesChart.width(768)
+	 	var timeScale = d3.scaleTime().domain([dateDim.bottom(1)[0].dtg, dateDim.top(1)[0].dtg]);
+
+	  	timeChart.width(768)
 			    .height(480)
 			  	.yAxisLabel("Number of Crimes")
                 .xAxisLabel("Date")
                 .dimension(dayDim)
-                .group(dayCrimeGroup)
-                .x(d3.scaleTime().domain(d3.extent(data, function(d) { return d3.timeDay(d.dtg); })))
+                .group(dayGroup)
+                .x(timeScale)
                 .seriesAccessor(function(d) { return d.key[1]; })
-                .keyAccessor(function(d) {return d.key[0];});
+                .keyAccessor(function(d) {return d.key[0];})
+                .valueAccessor(function(d) {return d.value})
+                .colors(colorScale)
+                .colorAccessor(function(d) {return d.value;})
+                .brushOn(false)
+				.elasticY(true)
+				.legend(dc.legend().x(50).y(0).itemHeight(10).itemWidth(100).horizontal(1).legendWidth(150));;
 	 
 	 dc.renderAll();
 	});

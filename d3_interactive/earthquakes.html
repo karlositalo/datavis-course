@@ -91,7 +91,21 @@
     attribution: '&copy; <a href="http://www.openstreetmap.org/">OpenStreetMap</a> contributors',
     maxZoom: 17
     }).addTo(map);
-    
+
+    map.on('moveend', updateFilters);
+
+  function updateFilters(){
+	var visibleMarkers = new Array;
+    markerLayer.eachLayer(function(layer) {
+    if( map.getBounds().contains(layer.getLatLng()) )
+      visibleMarkers.push(layer.publicid);
+      //add layer.publicid to some array visibleMarkers
+    });
+    idDimension.filterFunction(function(d){
+      return visibleMarkers.indexOf(d) > -1;
+    });
+    dc.redrawAll();
+  }
     // load data from a csv file
     d3.csv("data/earthquakes.csv").then(function (data) {
       // format our data
@@ -239,18 +253,6 @@
       map.removeLayer(markerLayer); //remove layerGroup if present
     }
     markerLayer = L.layerGroup(todisplay).addTo(map);//add it again passing the array of markers
-  }
-  map.on('moveend', updateFilters);
-  function updateFilters(){
-    markerLayer.eachLayer(function(layer) {
-    if( map.getBounds().contains(layer.getLatLng()) )
-      visibleMarkers.push(layer.publicid);
-      //add layer.publicid to some array visibleMarkers
-    });
-    idDimension.filterFunction(function(d){
-      return visibleMarkers.indexOf(d) > -1;
-    });
-    dc.redrawAll();
   }
     </script>
 

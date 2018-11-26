@@ -8,6 +8,11 @@
 [Exercise05-Chicago Crims](d3_crossfilter_2/d3_crossfilter_2/chicago.html) --Map Visualization <br>
 [Exercise06-Songs](datavis-course/blob/master/d3_networks_trees/songs.html) --Networks and Trees <br>
 [Exercise06-Les Miserables](datavis-course/blob/master/d3_networks_trees/lesmiserables.html) --Networks and Trees <br>
+[Exercise07-1](datavis-course/blob/master/color-d3/color-d3/usa.html) --EUA<br>
+[Exercise07-2](datavis-course/blob/master/color-d3/color-d3/crimes.html) --Fortaleza Crimes<br>
+[Exercise08-1](datavis-course/blob/master/d3_interactive/usa.html) --USA<br>
+[Exercise08-2](datavis-course/blob/master/d3_interactive/earthquakes.html) --Earthquakes<br>
+
 ---
 
 Para saber mais sobre a sintaxe markdown, veja [este guia](https://guides.github.com/features/mastering-markdown/).
